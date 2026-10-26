@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Cổng Thanh Toán Tự Động</title>
+  
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  <link rel="preconnect" href="https://img.vietqr.io" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-base: #05050A; /* Đen tuyền sang trọng */
+      --primary: #3B82F6; /* Xanh dương Fintech */
+      --primary-glow: rgba(59, 130, 246, 0.5);
+      --accent: #8B5CF6; /* Tím nhẹ */
+      --success: #10B981;
+      --danger: #EF4444;
+      
+      --card-bg: rgba(24, 24, 27, 0.6);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --item-bg: rgba(255, 255, 255, 0.03);
+      
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; overscroll-behavior: none; }
+    
+    /* CHẶN BÔI ĐEN VĂN BẢN */
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background-color: var(--bg-base); 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      color: var(--text-main); 
+      position: relative; 
+      -webkit-user-select: none; -ms-user-select: none; user-select: none;
+    }
+    
+    /* HIỆU ỨNG NỀN AURORA CAO CẤP */
+    .bg-aurora { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: 0.6; animation: floatBlob 15s infinite alternate ease-in-out; }
+    .blob-1 { width: 350px; height: 350px; background: rgba(59, 130, 246, 0.3); top: -100px; left: -100px; }
+    .blob-2 { width: 300px; height: 300px; background: rgba(139, 92, 246, 0.25); bottom: -100px; right: -50px; animation-delay: -7s; }
+    
+    @keyframes floatBlob { 
+      0% { transform: translate(0, 0) scale(1); } 
+      100% { transform: translate(50px, 80px) scale(1.1); } 
+    }
+
+    /* CONTAINER CHÍNH */
+    .app-container { width: 100%; max-width: 420px; height: 100%; max-height: 100dvh; display: flex; flex-direction: column; position: relative; z-index: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 20px;}
+    
+    /* HEADER BẢO MẬT */
+    .app-header { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 20px 0 10px; color: var(--text-muted); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .app-header svg { width: 16px; height: 16px; color: var(--primary); }
+
+    .screen { display: none; flex-direction: column; flex-grow: 1; padding: 0 clamp(16px, 4vw, 24px); justify-content: center; animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .screen.active { display: flex; }
+    @keyframes slideUpFade { 0% { opacity: 0; transform: translateY(20px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    
+    /* THẺ GLASSMORPHISM */
+    .card { background: linear-gradient(145deg, rgba(30, 30, 36, 0.7), rgba(20, 20, 24, 0.4)); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 32px; padding: 24px; box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1); border: 1px solid var(--card-border); display: flex; flex-direction: column; gap: 16px; }
+    
+    /* KHU VỰC QR CODE */
+    .qr-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 8px; }
+    .qr-wrapper { position: relative; background: #fff; padding: 12px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2), 0 0 20px var(--primary-glow); margin-bottom: 16px; overflow: hidden; transition: transform 0.3s ease;}
+    .qr-wrapper:hover { transform: translateY(-3px); }
+    
+    /* HIỆU ỨNG QUÉT MƯỢT MÀ */
+    .ai-scanner { position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: linear-gradient(to bottom, transparent, var(--primary), transparent); box-shadow: 0 0 20px var(--primary); animation: scanAI 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate; z-index: 2; border-radius: 50%; opacity: 0.8;}
+    @keyframes scanAI { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+    
+    .qr-wrapper img { width: auto; height: clamp(160px, 26vh, 220px); aspect-ratio: 1/1; border-radius: 14px; display: block; position: relative; z-index: 1; }
+    
+    /* NÚT LƯU QR - HIỆN ĐẠI */
+    .btn-save-qr { background: linear-gradient(135deg, #3B82F6, #2563EB); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 100px; padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3); }
+    .btn-save-qr:active { transform: scale(0.95); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); }
+    .btn-save-qr svg { width: 16px; height: 16px; }
+
+    /* DANH SÁCH THÔNG TIN COPY (STYLE iOS LIST) */
+    .info-list { background: rgba(0, 0, 0, 0.2); border-radius: 20px; padding: 4px; border: 1px solid rgba(255,255,255,0.05); }
+    .copy-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; border-radius: 16px;}
+    .copy-item:last-child { border-bottom: none; }
+    .copy-item:active { background: rgba(255,255,255,0.05); transform: scale(0.99); }
+    
+    .copy-info { display: flex; flex-direction: column; overflow: hidden; padding-right: 12px; width: 100%; gap: 4px;}
+    .copy-lbl { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+    .copy-val { font-size: 14px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace, 'Plus Jakarta Sans'; letter-spacing: 0.5px;}
+    .copy-val.highlight { color: #38BDF8; font-size: 17px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0; text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);}
+    
+    /* NÚT COPY TRÒN NHỎ */
+    .btn-copy-icon { background: rgba(255,255,255,0.08); border: none; color: var(--text-main); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; backdrop-filter: blur(5px);}
+    .btn-copy-icon:active { background: var(--primary); color: #fff; transform: scale(0.85); }
+    .btn-copy-icon svg { width: 14px; height: 14px; }
+
+    /* BOX LƯU Ý */
+    .note-box { background: rgba(59, 130, 246, 0.08); border-radius: 16px; padding: 14px 16px; margin-top: 12px; border: 1px solid rgba(59, 130, 246, 0.15); display: flex; gap: 10px; align-items: flex-start;}
+    .note-icon { color: var(--primary); flex-shrink: 0; margin-top: 2px;}
+    .note-list { list-style: none; padding: 0; margin: 0; font-size: 12px; color: #CBD5E1; line-height: 1.6; font-weight: 500;}
+    .note-list li { margin-bottom: 6px; }
+    .note-list li:last-child { margin-bottom: 0; }
+    .note-list li strong { color: #fff; font-weight: 700; }
+    
+    /* TRẠNG THÁI THÀNH CÔNG / THẤT BẠI */
+    .status-container { padding: 32px 20px; text-align: center; }
+    .status-icon-wrapper { position: relative; width: 80px; height: 80px; margin: 0 auto 24px; display: flex; justify-content: center; align-items: center; }
+    
+    /* Hiệu ứng gợn sóng (Ripple) */
+    .ripple { position: absolute; border-radius: 50%; width: 100%; height: 100%; animation: rippleEffect 2s infinite; z-index: 0; }
+    @keyframes rippleEffect { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(1.6); opacity: 0; } }
+    
+    .status-icon { position: relative; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; z-index: 1; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+    .status-icon svg { width: 32px; height: 32px; }
+    
+    .success-theme .ripple { background: var(--success); }
+    .success-theme .status-icon { background: linear-gradient(135deg, #10B981, #059669); }
+    .success-theme h2 { color: #34D399; }
+    
+    .failed-theme .ripple { background: var(--danger); }
+    .failed-theme .status-icon { background: linear-gradient(135deg, #EF4444, #DC2626); }
+    .failed-theme h2 { color: #F87171; }
+    
+    @keyframes popIn { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    
+    /* BẢNG KẾT QUẢ */
+    .result-box { text-align: left; background: rgba(0,0,0,0.2); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-top: 24px;}
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+    .row:last-child { border-bottom: none; }
+    .row .label { color: var(--text-muted); font-weight: 500; }
+    .row .value { font-weight: 700; color: var(--text-main); text-align: right; font-family: monospace, 'Plus Jakarta Sans';}
+
+    /* TOAST THÔNG BÁO */
+    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(40px); background: rgba(255, 255, 255, 0.95); color: #0F172A; padding: 12px 24px; border-radius: 100px; font-size: 13px; font-weight: 700; opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 8px;}
+    .toast svg { width: 16px; height: 16px; color: var(--success); }
+    .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+    /* LOADING SCREEN */
+    .loader-card { padding: 40px 30px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .spinner { width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s ease-in-out infinite; margin-bottom: 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 8px 0; }
+    .loader-sub { font-size: 13px; color: var(--text-muted); margin: 0; }
+  </style>
+</head>
+<body>
+  
+  <!-- NỀN CHUYỂN ĐỘNG -->
+  <div class="bg-aurora"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  
+  <!-- TOAST (THÔNG BÁO COPY) -->
+  <div class="toast" id="toast">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span id="toast-msg">Đã sao chép!</span>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- HEADER -->
+    <div class="app-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      Cổng thanh toán an toàn
+    </div>
+
+    <!-- MÀN HÌNH LOADING -->
+    <div id="screen-loading" class="screen active" style="align-items: center;">
+      <div class="loader-card card" style="width: 100%;">
+        <div class="spinner"></div>
+        <p class="loader-title">Đang đồng bộ giao dịch</p>
+        <p class="loader-sub">Vui lòng đợi hệ thống mã hóa dữ liệu...</p>
+      </div>
+    </div>
+
+    <!-- MÀN HÌNH LỖI -->
+    <div id="screen-error" class="screen" style="align-items: center;">
+      <div class="card failed-theme" style="width: 100%; text-align: center; border-color: rgba(239,68,68,0.3);">
+        <div class="status-icon-wrapper" style="margin-top: 10px;">
+          <div class="ripple"></div>
+          <div class="status-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+        </div>
+        <h2 style="margin:0 0 8px; font-size: 18px; font-weight: 700;">Truy cập từ chối</h2>
+        <p id="error-msg" style="color: var(--text-muted); font-size: 14px; margin: 0;">Mã liên kết không hợp lệ.</p>
+      </div>
+    </div>
+
+    <!-- MÀN HÌNH CHÍNH -->
+    <div id="screen-bill" class="screen" style="padding-top: 0;">
+      
+      <!-- 1. CHỜ THANH TOÁN -->
+      <div id="bill-unpaid" style="display: flex; flex-direction: column; width: 100%;">
+        <div class="card">
+          <div class="qr-section">
+            <div class="qr-wrapper">
+              <div class="ai-scanner"></div>
+              <img id="qr-img" src="" alt="Mã QR" crossorigin="anonymous">
+            </div>
+            <button class="btn-save-qr" onclick="downloadQR()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Lưu mã QR
+            </button>
+          </div>
+          
+          <div class="info-list">
+            <div class="copy-item" onclick="copyText('cp-bank', 'Tên ngân hàng')">
+              <div class="copy-info"><span class="copy-lbl">Ngân hàng</span><span class="copy-val" id="cp-bank">---</span></div>
+              <button class="btn-copy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            </div>
+            <div class="copy-item" onclick="copyText('cp-acc', 'Số tài khoản')">
+              <div class="copy-info"><span class="copy-lbl">Số tài khoản</span><span class="copy-val" id="cp-acc">---</span></div>
+              <button class="btn-copy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            </div>
+            <div class="copy-item" onclick="copyText('cp-name', 'Chủ tài khoản')">
+              <div class="copy-info"><span class="copy-lbl">Chủ tài khoản</span><span class="copy-val" id="cp-name">---</span></div>
+              <button class="btn-copy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            </div>
+            <div class="copy-item" onclick="copyText('cp-amount', 'Số tiền')">
+              <div class="copy-info"><span class="copy-lbl">Số tiền cần thanh toán</span><span class="copy-val highlight" id="cp-amount">0 VNĐ</span></div>
+              <button class="btn-copy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            </div>
+            <div class="copy-item" onclick="copyText('cp-content', 'Nội dung')" style="border: none;">
+              <div class="copy-info"><span class="copy-lbl">Nội dung chuyển khoản</span><span class="copy-val" id="cp-content">---</span></div>
+              <button class="btn-copy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="note-box">
+          <svg class="note-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <ul class="note-list">
+            <li>Hệ thống xử lý giao dịch tự động <strong>24/7</strong>.</li>
+            <li>Vui lòng <strong>không thay đổi</strong> số tiền và nội dung để hệ thống duyệt đơn chính xác.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 2. ĐÃ THANH TOÁN THÀNH CÔNG -->
+      <div id="bill-paid" style="display: none; flex-direction: column; width: 100%;">
+        <div class="card success-theme status-container">
+          <div class="status-icon-wrapper">
+            <div class="ripple"></div>
+            <div class="status-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+          </div>
+          <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Giao dịch thành công</h2>
+          <p style="color: var(--text-muted); font-size: 14px; margin: 8px 0 0 0;">Cảm ơn bạn đã thanh toán</p>
+          
+          <div class="result-box">
+            <div class="row"><span class="label">Mã giao dịch</span><span class="value" id="bl-paid-id">---</span></div>
+            <div class="row"><span class="label">Thời gian</span><span class="value" id="bl-paid-time" style="font-family: 'Plus Jakarta Sans', sans-serif;">--:--</span></div>
+            <div class="row"><span class="label">Số tiền</span><span class="value" id="bl-paid-amount" style="font-size: 15px;">0 VNĐ</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. THẤT BẠI / ĐÃ HỦY -->
+      <div id="bill-failed" style="display: none; flex-direction: column; width: 100%;">
+        <div class="card failed-theme status-container">
+          <div class="status-icon-wrapper">
+            <div class="ripple"></div>
+            <div class="status-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+          </div>
+          <h2 style="margin: 0; font-size: 22px; font-weight: 800;">Giao dịch đã hủy</h2>
+          <p style="color: var(--text-muted); font-size: 14px; margin: 8px 0 0 0;">Thời gian giao dịch đã hết hạn</p>
+          
+          <div class="result-box">
+            <div class="row"><span class="label">Mã giao dịch</span><span class="value" id="bl-failed-id">---</span></div>
+            <div class="row"><span class="label">Thời gian tạo</span><span class="value" id="bl-failed-time" style="font-family: 'Plus Jakarta Sans', sans-serif;">--:--</span></div>
+            <div class="row"><span class="label">Số tiền</span><span class="value" id="bl-failed-amount" style="font-size: 15px;">0 VNĐ</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ==============================================================
+    // 🛡️ BẢO MẬT: CHẶN CHUỘT PHẢI & DEVTOOLS (F12)
+    // ==============================================================
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','i','J','j','C','c'].includes(e.key)) || (e.ctrlKey && ['U','u','S','s'].includes(e.key))) {
+        e.preventDefault();
+      }
+    });
+    setInterval(() => { const before = Date.now(); debugger; const after = Date.now(); }, 1000);
+    // ==============================================================
+
+    // ==============================================================
+    // 🔧 CẤU HÌNH NGÂN HÀNG
+    // ==============================================================
+    const BANK_ID = 'VCB';                      
+    const BANK_NAME = 'VIETCOMBANK';               
+    const ACCOUNT_NO = 'TGE60603130946VCB';        
+    const ACCOUNT_NAME = 'DINH VIET TRUONG';   
+    
+    // 🔗 LINK LUÂN PHIÊN GET DỮ LIỆU
+    const API_URL_1 = "https://script.google.com/macros/s/AKfycbzAlGEH3r3yHIGW2HYcYZX2wxf5rTYqtrLhqOe6as9RHifV_BpscnB7PvWtDyxc5cl4ZQ/exec";
+    const API_URL_2 = "https://script.google.com/macros/s/AKfycbzOxkqvXRnuzC-Ek8AUlutoAm7jsSgAYG-lGi8g0kxoV4UZ7FSIf7lCePQw3334ltubqw/exec";
+    // ==============================================================
+
+    let currentId = "";
+    let pollingInterval;
+    let currentTxData = {};
+    let useUrl1 = true; 
+
+    function switchScreen(screenName) {
+      ['loading', 'error', 'bill'].forEach(id => {
+        const el = document.getElementById('screen-' + id);
+        if (el) el.classList.remove('active');
+      });
+      document.getElementById('screen-' + screenName).classList.add('active');
+    }
+
+    function showError(msg) {
+        if (pollingInterval) clearInterval(pollingInterval);
+        document.getElementById('error-msg').innerText = msg;
+        switchScreen('error');
+    }
+
+    window.onload = function() {
+      document.getElementById('cp-bank').innerText = BANK_NAME;
+      document.getElementById('cp-acc').innerText = ACCOUNT_NO;
+      document.getElementById('cp-name').innerText = ACCOUNT_NAME;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      currentId = (urlParams.get('net') || "").trim();
+      
+      if (!currentId) {
+        showError("Mã liên kết thanh toán rỗng hoặc không hợp lệ.");
+        return;
+      }
+
+      currentTxData = { id: currentId, amount: "0", content: "---", status: "Chờ thanh toán" };
+      fetchFirstData();
+    };
+
+    function fetchFirstData() {
+      const url1 = API_URL_1 + "?id=" + encodeURIComponent(currentId) + "&t=" + Date.now();
+      const url2 = API_URL_2 + "?id=" + encodeURIComponent(currentId) + "&t=" + Date.now();
+
+      const fetchPromise = (url) => fetch(url, { cache: 'no-store' }).then(res => res.json()).then(res => {
+         if (res.success || res.status === "success") return res;
+         throw new Error("Invalid");
+      });
+
+      Promise.any([fetchPromise(url1), fetchPromise(url2)])
+      .then(result => {
+        let orderData = result.data;
+        if(orderData) {
+          currentTxData.amount = orderData["Số tiền"] || currentTxData.amount;
+          currentTxData.content = orderData["Nội dung"] || currentTxData.content;
+          currentTxData.status = orderData["Trạng thái"] || "Chờ thanh toán";
+          currentTxData.paymentTime = orderData["Thời gian thanh toán"] || "--:--";
+          
+          renderData(currentTxData);
+          switchScreen('bill');
+          
+          const statusStr = String(currentTxData.status).trim().toLowerCase();
+          const isFinished = (statusStr.includes('đã thanh toán') || statusStr.includes('thành công') || statusStr.includes('thất bại') || statusStr.includes('hủy') || statusStr.includes('lỗi') || statusStr.includes('quá hạn'));
+          
+          if (!isFinished) startPolling();
+        } else {
+           showError("Không tìm thấy mã đơn hàng này trên hệ thống.");
+        }
+      })
+      .catch(() => showError("Lỗi kết nối máy chủ. Vui lòng làm mới trang."));
+    }
+
+    function renderData(data) {
+      const statusStr = String(data.status || "").trim().toLowerCase();
+      const isPaid = (statusStr.includes('đã thanh toán') || statusStr.includes('thành công'));
+      const isFailed = (statusStr.includes('thất bại') || statusStr.includes('hủy') || statusStr.includes('lỗi') || statusStr.includes('quá hạn'));
+
+      let rawAmount = String(data.amount).replace(/[^0-9]/g, '');
+      let displayAmount = rawAmount && rawAmount !== "0" ? rawAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " VNĐ" : "0 VNĐ";
+
+      // Đổ dữ liệu
+      document.getElementById('cp-amount').innerText = displayAmount;
+      document.getElementById('cp-content').innerText = data.content;
+      document.getElementById('qr-img').src = 'https://img.vietqr.io/image/' + BANK_ID + '-' + ACCOUNT_NO + '-qr_only.svg?amount=' + rawAmount + '&addInfo=' + encodeURIComponent(data.content || '') + '&accountName=' + encodeURIComponent(ACCOUNT_NAME);
+      
+      document.getElementById('bl-paid-id').innerText = data.id;
+      document.getElementById('bl-paid-time').innerText = data.paymentTime || '--:--';
+      document.getElementById('bl-paid-amount').innerText = displayAmount;
+
+      document.getElementById('bl-failed-id').innerText = data.id;
+      document.getElementById('bl-failed-time').innerText = data.paymentTime || '--:--';
+      document.getElementById('bl-failed-amount').innerText = displayAmount;
+
+      // Điều hướng màn hình
+      document.getElementById('bill-unpaid').style.display = isPaid || isFailed ? 'none' : 'flex';
+      document.getElementById('bill-paid').style.display = isPaid ? 'flex' : 'none';
+      document.getElementById('bill-failed').style.display = isFailed && !isPaid ? 'flex' : 'none';
+    }
+
+    function startPolling() {
+      if(pollingInterval) clearInterval(pollingInterval);
+      
+      pollingInterval = setInterval(() => {
+          const targetUrl = useUrl1 ? API_URL_1 : API_URL_2;
+          useUrl1 = !useUrl1;
+
+          fetch(targetUrl + "?id=" + encodeURIComponent(currentId) + "&t=" + Date.now(), { cache: 'no-store' })
+            .then(res => res.json())
+            .then(result => {
+              if (result.success || result.status === "success") {
+                  let orderData = result.data;
+                  if (orderData && pollingInterval) {
+                      const statusStr = String(orderData["Trạng thái"] || "").trim().toLowerCase();
+                      const isPaid = (statusStr.includes('đã thanh toán') || statusStr.includes('thành công'));
+                      const isFailed = (statusStr.includes('thất bại') || statusStr.includes('hủy') || statusStr.includes('lỗi') || statusStr.includes('quá hạn'));
+                      
+                      if (isPaid || isFailed) {
+                          clearInterval(pollingInterval); 
+                          pollingInterval = null;
+                          currentTxData.status = orderData["Trạng thái"];
+                          currentTxData.paymentTime = orderData["Thời gian thanh toán"] || "--:--";
+                          renderData(currentTxData);
+                      }
+                  }
+              }
+            }).catch(e => {});
+      }, 1500); 
+    }
+
+    function downloadQR() {
+      showToast("Đang tải ảnh xuống...", "Đợi chút");
+      const qrUrl = document.getElementById('qr-img').src;
+      const amount = document.getElementById('cp-amount').innerText;
+      const content = document.getElementById('cp-content').innerText;
+
+      const img = new Image(); img.crossOrigin = "Anonymous"; 
+      img.onload = function() {
+        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+        canvas.width = 440; canvas.height = 640;
+        
+        // Màu nền Canvas phù hợp với theme mới
+        ctx.fillStyle = '#05050A'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Vẽ box trắng lót dưới QR
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath(); ctx.roundRect(70, 50, 300, 300, 20); ctx.fill();
+        
+        // Vẽ QR
+        ctx.drawImage(img, 85, 65, 270, 270); 
+        
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#3B82F6'; ctx.font = 'bold 22px Arial, sans-serif'; ctx.fillText('THÔNG TIN THANH TOÁN', canvas.width / 2, 410);
+        ctx.fillStyle = '#94A3B8'; ctx.font = '16px monospace'; ctx.fillText('Mã GD: ' + currentId, canvas.width / 2, 450);
+        ctx.fillStyle = '#F8FAFC'; ctx.font = 'bold 30px Arial, sans-serif'; ctx.fillText(amount, canvas.width / 2, 500);
+        ctx.fillStyle = '#94A3B8'; ctx.font = '16px Arial, sans-serif'; ctx.fillText('Nội dung: ' + content, canvas.width / 2, 540);
+        
+        ctx.fillStyle = '#475569'; ctx.font = 'italic 13px Arial, sans-serif'; ctx.fillText('Quét mã bằng ứng dụng ngân hàng hoặc Momo', canvas.width / 2, 600);
+        
+        const link = document.createElement('a'); link.download = 'QR_ThanhToan_' + currentId + '.png'; link.href = canvas.toDataURL('image/png'); link.click();
+      };
+      img.onerror = function() { showToast("Lỗi kết xuất ảnh, vui lòng thử lại!"); }
+      img.src = qrUrl;
+    }
+
+    // Tối ưu hàm copy: Click vào cả thẻ row sẽ copy, và hiện tên trường đã copy
+    function copyText(id, labelName = "") { 
+      var textToCopy = document.getElementById(id).innerText.replace(/ VNĐ/g, '').replace(/ đ/g, '').replace(/\./g, '');
+      var textArea = document.createElement("textarea");
+      textArea.value = textToCopy; document.body.appendChild(textArea); textArea.select(); document.execCommand("Copy"); textArea.remove();
+      
+      let msg = labelName ? "Đã chép " + labelName : "Đã sao chép";
+      showToast(msg); 
+    }
+    
+    let toastTimeout;
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      t.classList.add('show');
+      if(toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(function() { t.classList.remove('show'); }, 2500);
+    }
+  </script>
+</body>
+</html>
